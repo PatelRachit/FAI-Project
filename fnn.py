@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score, classification_report
 from sklearn.utils.class_weight import compute_sample_weight
 import numpy as np
 
-data = pd.read_csv("diabetes_binary_5050split_health_indicators_BRFSS2015.csv")
+data = pd.read_csv("dataset/diabetes_binary_5050split_health_indicators_BRFSS2015.csv")
 
 X = data.drop("Diabetes_binary", axis=1)
 y = data["Diabetes_binary"]
