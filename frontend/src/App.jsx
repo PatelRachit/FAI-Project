@@ -8,14 +8,14 @@ function App() {
 
   const checkApiCall = async () => {
     const { data } = await axios.get(
-      `${import.meta.env.VITE_SERVER_URL}/api/demo`,
+      `${import.meta.env.VITE_SERVER_URL}/predict`
     );
     console.log(data);
   };
   return (
     <>
       <Router>
-        <RoutesProvider/>
+        <RoutesProvider />
       </Router>
     </>
   );

@@ -1,20 +1,29 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 import joblib
 import pandas as pd
-import numpy as np
-from flask_cors import CORS  # Import CORS
-
+import os
 
 app = Flask(__name__)
 
-CORS(app)
+# Allow CORS requests from your frontend
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
+# # Load model and scaler from the parent directory of this file
+# base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# model_path = os.path.join(base_dir, 'fnn.pkl')
+# scaler_path = os.path.join(base_dir, 'scaler.pkl')
 
-# Load the model and scaler from the 'server' folder
-model = joblib.load("server/fnn.pkl")
-scaler = joblib.load("server/scaler.pkl")
+# # Debug print (optional)
+# print("Model path:", model_path)
+# print("Scaler path:", scaler_path)
 
-# Define the order of columns (must match training)
+# Load them
+
+model = joblib.load("fnn.pkl")
+scaler = joblib.load("scaler.pkl")
+
+# Columns used for training
 columns = [
     "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke",
     "HeartDiseaseorAttack", "PhysActivity", "Fruits", "Veggies",
@@ -25,29 +34,19 @@ columns = [
 @app.route('/predict', methods=['POST'])
 def predict():
     try:
-        # Parse the incoming JSON data
         input_data = request.get_json()
-        print(input_data)
+        print("Input JSON:", input_data)
 
-        # Convert the JSON data into a pandas DataFrame
         input_df = pd.DataFrame([input_data])
+        input_df = input_df[columns]
 
-        # Ensure the columns match the model's expected input (order and feature names)
-        input_df = input_df[columns]  # Select the columns used during training
-
-        # Scale the input data using the saved scaler
         input_scaled = scaler.transform(input_df)
-
-        # Predict using the model
         predictions = model.predict(input_scaled)
 
-        print(predictions)
+        print("Prediction:", predictions)
 
-        # Return predictions as a JSON response
-        return jsonify({'prediction': int(predictions[0])})  # Convert to integer and return
+        return jsonify({'prediction': int(predictions[0])})
 
     except Exception as e:
+        print("Error:", str(e))
         return jsonify({'error': str(e)}), 400
-
-if __name__ == '__main__':
-    app.run(debug=True)
