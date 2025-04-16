@@ -1,52 +1,52 @@
-import os
-from flask import Flask, jsonify
-import pickle
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+import joblib
 import pandas as pd
+import os
 
-# Initialize Flask app
 app = Flask(__name__)
 
-# Load the trained model from the correct path
-model = pickle.load(open("xgboost_model.pkl", "rb"))
+# Allow CORS requests from your frontend
+CORS(app, resources={r"/*": {"origins": "http://localhost:5173"}})
 
-# Sample data (for now, using the sample data you mentioned)
-sample_data = pd.DataFrame({
-    'HighBP': [1.0, 1.0, 0.0, 1.0, 0.0],
-    'HighChol': [0.0, 1.0, 0.0, 1.0, 0.0],
-    'CholCheck': [1.0, 1.0, 1.0, 1.0, 1.0],
-    'BMI': [26.0, 26.0, 26.0, 28.0, 29.0],
-    'Smoker': [0.0, 1.0, 0.0, 1.0, 1.0],
-    'Stroke': [0.0, 1.0, 0.0, 0.0, 0.0],
-    'HeartDiseaseorAttack': [0.0, 0.0, 0.0, 0.0, 0.0],
-    'PhysActivity': [1.0, 0.0, 1.0, 1.0, 1.0],
-    'Fruits': [0.0, 1.0, 1.0, 1.0, 1.0],
-    'Veggies':[1.0 ,0.0, 0.0, 0.0, 1.0],
-    'HvyAlcoholConsump':[0.0, 1.0, 0.0, 0.0, 0.0],
-    'AnyHealthcare': [1.0, 1.0, 1.0, 1.0, 1.0],
-    'NoDocbcCost': [0.0, 0.0, 0.0, 0.0, 0.0],
-    'GenHlth': [3.0, 3.0, 1.0, 3.0, 2.0],
-    'MentHlth': [5.0, 0.0, 0.0, 0.0, 0.0],
-    'PhysHlth': [30.0, 0.0, 10.0, 3.0, 0.0],
-    'DiffWalk': [0.0, 0.0, 0.0, 0.0, 0.0],
-    'Sex': [1.0, 0.0, 1.0, 1.0, 0.0],
-    'Age': [4.0, 12.0, 13.0, 11.0, 8.0],
-    'Education': [6.0, 6.0, 6.0, 6.0, 5.0],
-    'Income': [8.0, 8.0, 8.0, 8.0, 8.0]
-})
+# # Load model and scaler from the parent directory of this file
+# base_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+# model_path = os.path.join(base_dir, 'fnn.pkl')
+# scaler_path = os.path.join(base_dir, 'scaler.pkl')
 
-# Endpoint to get prediction
-@app.route('/predict', methods=['GET'])
+# # Debug print (optional)
+# print("Model path:", model_path)
+# print("Scaler path:", scaler_path)
+
+# Load them
+
+model = joblib.load("fnn.pkl")
+scaler = joblib.load("scaler.pkl")
+
+# Columns used for training
+columns = [
+    "HighBP", "HighChol", "CholCheck", "BMI", "Smoker", "Stroke",
+    "HeartDiseaseorAttack", "PhysActivity", "Fruits", "Veggies",
+    "HvyAlcoholConsump", "AnyHealthcare", "NoDocbcCost", "GenHlth",
+    "MentHlth", "PhysHlth", "DiffWalk", "Sex", "Age", "Education", "Income"
+]
+
+@app.route('/predict', methods=['POST'])
 def predict():
-    # Using the sample data to predict the diabetes binary outcome
-    sample_input = sample_data.iloc[2].values.reshape(1, -1)  # Reshape to match the model's input shape
-    print(sample_input)
-    prediction = model.predict(sample_input)
-    print(prediction)
+    try:
+        input_data = request.get_json()
+        print("Input JSON:", input_data)
 
-    # Returning the prediction in the response as JSON
-    return jsonify({
-        'prediction': int(prediction[0])  # Convert prediction to integer and send as response
-    })
+        input_df = pd.DataFrame([input_data])
+        input_df = input_df[columns]
 
-if __name__ == '__main__':
-    app.run(debug=True)
+        input_scaled = scaler.transform(input_df)
+        predictions = model.predict(input_scaled)
+
+        print("Prediction:", predictions)
+
+        return jsonify({'prediction': int(predictions[0])})
+
+    except Exception as e:
+        print("Error:", str(e))
+        return jsonify({'error': str(e)}), 400
